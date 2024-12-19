@@ -73,12 +73,15 @@ class TextDetector(BaseModule):
                 self.convert_onnx(path_onnx)
 
             model = onnx.load(path_onnx)
+            providers = []
             if torch.cuda.is_available() and device == "cuda":
-                self.sess = onnxruntime.InferenceSession(
-                    model.SerializeToString(), providers=["CUDAExecutionProvider"]
-                )
-            else:
-                self.sess = onnxruntime.InferenceSession(model.SerializeToString())
+                providers.append("CUDAExecutionProvider")
+            providers.append("CPUExecutionProvider")
+
+            self.sess = onnxruntime.InferenceSession(
+                model.SerializeToString(),
+                providers=providers
+            )
 
     def convert_onnx(self, path_onnx):
         dynamic_axes = {
@@ -86,7 +89,7 @@ class TextDetector(BaseModule):
             "output": {0: "batch_size", 2: "height", 3: "width"},
         }
 
-        dummy_input = torch.randn(1, 3, 256, 256, requires_grad=True)
+        dummy_input = torch.randn(1, 3, 256, 256, requires_grad=True, device=self.device)
 
         torch.onnx.export(
             self.model,
@@ -122,9 +125,9 @@ class TextDetector(BaseModule):
         tensor = self.preprocess(img)
 
         if self.infer_onnx:
-            input = tensor.numpy()
+            input = tensor.cpu().numpy()  # Ensure tensor is on CPU before numpy conversion
             results = self.sess.run(["output"], {"input": input})
-            preds = {"binary": torch.tensor(results[0])}
+            preds = {"binary": torch.tensor(results[0], device=self.device)}  # Place result on correct device
         else:
             with torch.inference_mode():
                 tensor = tensor.to(self.device)
