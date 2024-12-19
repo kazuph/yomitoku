@@ -23,3 +23,6 @@ results/
 .coverage*
 
 *.onnx
+
+/input
+/output

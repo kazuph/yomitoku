@@ -73,15 +73,16 @@ class TextDetector(BaseModule):
                 self.convert_onnx(path_onnx)
 
             model = onnx.load(path_onnx)
-            providers = []
             if torch.cuda.is_available() and device == "cuda":
-                providers.append("CUDAExecutionProvider")
-            providers.append("CPUExecutionProvider")
-
-            self.sess = onnxruntime.InferenceSession(
-                model.SerializeToString(),
-                providers=providers
-            )
+                self.sess = onnxruntime.InferenceSession(
+                    model.SerializeToString(),
+                    providers=["CUDAExecutionProvider"]
+                )
+            else:
+                self.sess = onnxruntime.InferenceSession(
+                    model.SerializeToString(),
+                    providers=["CPUExecutionProvider"]
+                )
 
     def convert_onnx(self, path_onnx):
         dynamic_axes = {
@@ -89,7 +90,13 @@ class TextDetector(BaseModule):
             "output": {0: "batch_size", 2: "height", 3: "width"},
         }
 
-        dummy_input = torch.randn(1, 3, 256, 256, requires_grad=True, device=self.device)
+        # ダミー入力サイズを最小限に抑える
+        h = w = min(
+            getattr(self._cfg.data, "shortest_size", 640),
+            getattr(self._cfg.data, "limit_size", 800),
+            640  # デフォルトの最大サイズ
+        )
+        dummy_input = torch.randn(1, 3, h, w, requires_grad=True, device=self.device)
 
         torch.onnx.export(
             self.model,
@@ -125,9 +132,13 @@ class TextDetector(BaseModule):
         tensor = self.preprocess(img)
 
         if self.infer_onnx:
-            input = tensor.cpu().numpy()  # Ensure tensor is on CPU before numpy conversion
+            # デバイス上でテンソルを維持したまま変換
+            if self.device == "cuda":
+                input = tensor.cuda().numpy()
+            else:
+                input = tensor.cpu().numpy()
             results = self.sess.run(["output"], {"input": input})
-            preds = {"binary": torch.tensor(results[0], device=self.device)}  # Place result on correct device
+            preds = {"binary": torch.tensor(results[0], device=self.device)}
         else:
             with torch.inference_mode():
                 tensor = tensor.to(self.device)

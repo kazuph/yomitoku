@@ -205,7 +205,18 @@ def main():
 
     if args.lite:
         configs["ocr"]["text_recognizer"]["model_name"] = "parseq-small"
-        configs["ocr"]["text_detector"]["infer_onnx"] = True
+        # liteモデル用の設定（ONNXを使用しない）
+        lite_config = {
+            "data": {
+                "shortest_size": 640,  # 1280から半分に
+                "limit_size": 800,    # 1600から半分に
+            }
+        }
+
+        configs["ocr"]["text_detector"] = {
+            "infer_onnx": False,  # PyTorchを使用
+            "path_cfg": lite_config
+        }
 
         # Note: Text Detector以外はONNX推論よりもPyTorch推論の方が速いため、ONNX推論は行わない
         # configs["ocr"]["text_recognizer"]["infer_onnx"] = True

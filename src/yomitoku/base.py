@@ -24,11 +24,14 @@ def load_yaml_config(path_config: str):
 
 def load_config(
     default_config,
-    path_config: Union[str, None] = None,
+    path_config: Union[str, dict, None] = None,
 ):
     cfg = OmegaConf.structured(default_config)
     if path_config is not None:
-        yaml_config = load_yaml_config(path_config)
+        if isinstance(path_config, dict):
+            yaml_config = OmegaConf.create(path_config)
+        else:
+            yaml_config = load_yaml_config(path_config)
         cfg = OmegaConf.merge(cfg, yaml_config)
     return cfg
 
