@@ -1,0 +1,82 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose.yml
+compose.yml
+.docker
+
+# Documentation
+docs/
+*.md
+!README.md
+!README_EN.md
+!gallery.md
+LICENSE
+
+# Tests
+tests/
+test/
+testing/
+
+# Cache
+.cache/
+.pytest_cache/
+
+# Static files and media
+static/
+media/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.pdf
+*.mp4
+*.mov
+
+# Logs
+logs/
+*.log
+
+# Local development
+.env
+.env.*

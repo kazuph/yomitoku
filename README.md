@@ -96,6 +96,12 @@ python app.py
 
 サーバーは `http://localhost:8000` で起動します。
 
+もしくはdocker composeを利用して起動することも可能です。
+
+```bash
+DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose up --build
+```
+
 ### APIエンドポイント
 
 #### 画像解析 API

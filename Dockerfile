@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 ENV TZ=Asia/Tokyo
 ENV DEBIAN_FRONTEND=noninteractive
@@ -6,7 +6,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt -y update && apt -y upgrade
 
-ARG PYTHON_VERSION=3.9
+ARG PYTHON_VERSION=3.12
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt install -y --no-install-recommends \
@@ -30,8 +30,14 @@ RUN apt install -y --no-install-recommends \
 RUN python${PYTHON_VERSION} --version
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python${PYTHON_VERSION} 1
 
-RUN python -m pip install --upgrade pip
-
-RUN pip install yomitoku
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 WORKDIR /workspace
+
+COPY . .
+
+RUN uv sync --frozen --no-cache
+RUN uv pip install fastapi uvicorn python-multipart
+RUN uv pip install -e .
+
+CMD ["python", "app.py"]
