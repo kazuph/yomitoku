@@ -299,11 +299,11 @@ class DocumentAnalyzer:
         results = DocumentAnalyzerSchema(**outputs)
         return results, ocr, layout
 
-    def __call__(self, img):
+    async def __call__(self, img):
         self.img = img
-        resutls, ocr, layout = asyncio.run(self.run(img))
+        results, ocr, layout = await self.run(img)
 
         if self.visualize:
-            layout = reading_order_visualizer(layout, resutls)
+            layout = reading_order_visualizer(layout, results)
 
-        return resutls, ocr, layout
+        return results, ocr, layout

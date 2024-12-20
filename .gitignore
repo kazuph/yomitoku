@@ -26,3 +26,13 @@ results/
 
 /input
 /output
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.ico
+*.webp
+*.svg
+*.pdf

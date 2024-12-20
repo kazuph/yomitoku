@@ -80,6 +80,54 @@ yomitoku --help
 - Yomitoku は文書 OCR 向けに最適化されており、情景 OCR(看板など紙以外にプリントされた文字の読み取り)向けには最適化されていません。
 - AI-OCR の識別精度を高めるために、入力画像の解像度が重要です。低解像度画像では識別精度が低下します。最低でも画像の短辺を 720px 以上の画像で推論することをお勧めします。
 
+## 🌐 APIサーバーの起動方法
+
+開発用のAPIサーバーを起動する場合は、以下の手順で実行してください：
+
+```bash
+# 必要なパッケージのインストール
+uv pip sync pyproject.toml
+uv pip install fastapi uvicorn python-multipart
+uv pip install -e .
+
+# サーバーの起動
+python app.py
+```
+
+サーバーは `http://localhost:8000` で起動します。
+
+### APIエンドポイント
+
+#### 画像解析 API
+
+- エンドポイント: `/analyze`
+- メソッド: POST
+- Content-Type: multipart/form-data
+- パラメータ:
+  - file: 解析する画像ファイル
+  - format: 出力フォーマット（オプション、デフォルト: "json"）
+    - "json": JSON形式で結果を返します
+    - "markdown": Markdown形式で結果を返します
+    - "vertical": 垂直方向のテキストのみを抽出して返します
+    - "horizontal": 水平方向のテキストのみを抽出して返します
+
+curlでのリクエスト例：
+```bash
+# JSON形式で取得
+curl -X POST -F "file=@test.png" http://localhost:8000/analyze
+
+# Markdown形式で取得
+curl -X POST -F "file=@test.png" "http://localhost:8000/analyze?format=markdown"
+
+# 垂直方向のテキストのみを取得
+curl -X POST -F "file=@test.png" "http://localhost:8000/analyze?format=vertical"
+
+# 水平方向のテキストのみを取得
+curl -X POST -F "file=@test.png" "http://localhost:8000/analyze?format=horizontal"
+```
+
+レスポンスは指定されたフォーマットで返されます。verticalとhorizontalフォーマットの場合は、指定された方向のテキストのみが文字列として返されます。
+
 ## 📝 ドキュメント
 
 パッケージの詳細は[ドキュメント](https://kotaro-kinoshita.github.io/yomitoku/)を確認してください。
