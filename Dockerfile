@@ -27,17 +27,25 @@ RUN apt install -y --no-install-recommends \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python${PYTHON_VERSION} --version
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python${PYTHON_VERSION} 1
+
+# uvの最適化設定
+ENV UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=never
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 WORKDIR /workspace
 
-COPY . .
+# pyproject.tomlとuv.lockを先にコピー
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/pip uv sync --no-install-project
 
-RUN uv sync --frozen --no-cache
-RUN uv pip install fastapi uvicorn python-multipart
-RUN uv pip install -e .
+# ソースコードなどをコピー
+COPY src configs scripts static tests app.py ./
+
+# 残りの依存関係を同期 (この時点でyomitokuのビルドが走る)
+RUN --mount=type=cache,target=/root/.cache/pip uv sync
 
 CMD ["python", "app.py"]

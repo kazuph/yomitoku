@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import os
 from pathlib import Path
 
@@ -13,14 +14,14 @@ from ..utils.logger import set_logger
 logger = set_logger(__name__, "INFO")
 
 
-def process_single_file(args, analyzer, path, format):
+async def process_single_file(args, analyzer, path, format):
     if path.suffix[1:].lower() in ["pdf"]:
         imgs = load_pdf(path)
     else:
         imgs = [load_image(path)]
 
     for page, img in enumerate(imgs):
-        results, ocr, layout = analyzer(img)
+        results, ocr, layout = await analyzer(img)
 
         dirname = path.parent.name
         filename = path.stem
@@ -77,7 +78,7 @@ def process_single_file(args, analyzer, path, format):
         logger.info(f"Output file: {out_path}")
 
 
-def main():
+async def async_main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "arg1",
@@ -239,7 +240,7 @@ def main():
                 start = time.time()
                 file_path = Path(f)
                 logger.info(f"Processing file: {file_path}")
-                process_single_file(args, analyzer, file_path, format)
+                await process_single_file(args, analyzer, file_path, format)
                 end = time.time()
                 logger.info(f"Total Processing time: {end-start:.2f} sec")
             except Exception:
@@ -247,10 +248,13 @@ def main():
     else:
         start = time.time()
         logger.info(f"Processing file: {path}")
-        process_single_file(args, analyzer, path, format)
+        await process_single_file(args, analyzer, path, format)
         end = time.time()
         logger.info(f"Total Processing time: {end-start:.2f} sec")
 
+
+def main():
+    asyncio.run(async_main())
 
 if __name__ == "__main__":
     main()

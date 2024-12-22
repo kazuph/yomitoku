@@ -18,35 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# DocumentAnalyzerのインスタンスを作成
-def create_analyzer(ignore_line_break: bool = False) -> DocumentAnalyzer:
-    return DocumentAnalyzer(
-        configs={
-            "ocr": {
-                "text_detector": {
-                    "device": "cuda",
-                    "visualize": False,
-                },
-                "text_recognizer": {
-                    "device": "cuda",
-                    "visualize": False,
-                },
-            },
-            "layout_analyzer": {
-                "layout_parser": {
-                    "device": "cuda",
-                    "visualize": False,
-                },
-                "table_structure_recognizer": {
-                    "device": "cuda",
-                    "visualize": False,
-                },
-            },
-        },
-        device="cuda",
-        visualize=False,
-        ignore_line_break=ignore_line_break
-    )
+from yomitoku.data.functions import load_pdf
 
 # DocumentAnalyzerのインスタンスを作成
 analyzer = DocumentAnalyzer(
@@ -90,46 +62,60 @@ async def analyze_document(
         - vertical: 垂直方向のテキストのみ
         - horizontal: 水平方向のテキストのみ
     """
-    # ファイルを読み込み
-    contents = await file.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    # ファイルを一時保存
+    import tempfile
+    import os
 
-    # 画像を解析
-    results, _, _ = await analyzer(img)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=file.filename) as temp_file:
+        contents = await file.read()
+        temp_file.write(contents)
+        temp_path = temp_file.name
 
-    # フォーマットに応じて結果を返す
-    format = format.lower()
-    if format == "markdown":
-        import tempfile
-        import os
+    try:
+        # PDFかどうかを判定
+        if file.filename.lower().endswith('.pdf'):
+            imgs = load_pdf(temp_path)
+        else:
+            # 画像として読み込み
+            nparr = np.frombuffer(contents, np.uint8)
+            imgs = [cv2.imdecode(nparr, cv2.IMREAD_COLOR)]
 
-        # 一時ファイルを作成してmarkdownを生成
-        with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as temp_file:
-            results.to_markdown(temp_file.name)
-            with open(temp_file.name, 'r', encoding='utf-8') as f:
-                markdown_content = f.read()
-            os.unlink(temp_file.name)  # 一時ファイルを削除
+        all_results = []
+        for img in imgs:
+            results, _, _ = await analyzer(img)
+            all_results.append(results)
 
-        return {"format": "markdown", "content": markdown_content}
-    elif format == "vertical" or format == "horizontal":
-        json_content = json.loads(results.model_dump_json())
-        # 指定された方向のテキストのみを抽出して結合
-        text = "\n".join([
-            p["contents"] for p in json_content["paragraphs"]
-            if p["direction"] == format and p["contents"] is not None
-        ])
-        return {"format": format, "content": text}
-    else:  # json
-        return {"format": "json", "content": json.loads(results.model_dump_json())}
+        # フォーマットに応じて結果を返す
+        format = format.lower()
+        if format == "markdown":
+            # 一時ファイルを作成してmarkdownを生成
+            with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as md_file:
+                for results in all_results:
+                    results.to_markdown(md_file.name)
+                with open(md_file.name, 'r', encoding='utf-8') as f:
+                    markdown_content = f.read()
+                os.unlink(md_file.name)  # 一時ファイルを削除
+            return {"format": "markdown", "content": markdown_content}
 
-        # レスポンスの作成
-        return {
-            "format": "json",
-            "content": json_content,
-            "vertical_only": vertical_text,
-            "horizontal_only": horizontal_text
-        }
+        elif format == "vertical" or format == "horizontal":
+            all_text = []
+            for results in all_results:
+                json_content = json.loads(results.model_dump_json())
+                # 指定された方向のテキストのみを抽出して結合
+                text = "\n".join([
+                    p["contents"] for p in json_content["paragraphs"]
+                    if p["direction"] == format and p["contents"] is not None
+                ])
+                all_text.append(text)
+            return {"format": format, "content": "\n\n".join(all_text)}
+
+        else:  # json
+            json_results = [json.loads(results.model_dump_json()) for results in all_results]
+            return {"format": "json", "content": json_results}
+
+    finally:
+        # 一時ファイルを削除
+        os.unlink(temp_path)
 
 if __name__ == "__main__":
     import uvicorn
