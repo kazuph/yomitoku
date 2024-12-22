@@ -100,13 +100,22 @@ async def analyze_document(
         format = format.lower()
         if format == "markdown":
             # 一時ファイルを作成してmarkdownを生成
-            with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as md_file:
-                for results in all_results:
-                    results.to_markdown(md_file.name)
-                with open(md_file.name, 'r', encoding='utf-8') as f:
-                    markdown_content = f.read()
-                os.unlink(md_file.name)  # 一時ファイルを削除
-            return {"format": "markdown", "content": markdown_content}
+            markdown_contents = []
+            for i, results in enumerate(all_results):
+                with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as md_file:
+                    results.to_markdown(md_file.name, img=imgs[i])
+                    with open(md_file.name, 'r', encoding='utf-8') as f:
+                        markdown_contents.append(f.read())
+                    os.unlink(md_file.name)  # 一時ファイルを削除
+
+            # ページ番号を追加して連結
+            final_markdown = ""
+            for i, content in enumerate(markdown_contents):
+                if i > 0:
+                    final_markdown += f"\n\n## Page {i + 1}\n\n"
+                final_markdown += content
+
+            return {"format": "markdown", "content": final_markdown}
 
         elif format == "vertical" or format == "horizontal":
             all_text = []
