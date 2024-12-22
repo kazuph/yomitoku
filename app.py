@@ -6,6 +6,11 @@ import cv2
 import numpy as np
 from yomitoku import DocumentAnalyzer
 import json
+import logging
+
+# ロガーの設定
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -21,6 +26,7 @@ app.add_middleware(
 from yomitoku.data.functions import load_pdf
 
 # DocumentAnalyzerのインスタンスを作成
+logger.info("Starting to initialize DocumentAnalyzer...")
 analyzer = DocumentAnalyzer(
     configs={
         "ocr": {
@@ -47,6 +53,11 @@ analyzer = DocumentAnalyzer(
     device="cuda",
     visualize=False
 )
+logger.info("DocumentAnalyzer initialization completed!")
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("FastAPI server is ready to handle requests!")
 
 @app.post("/analyze")
 async def analyze_document(
@@ -119,4 +130,5 @@ async def analyze_document(
 
 if __name__ == "__main__":
     import uvicorn
+    logger.info("Starting FastAPI server...")
     uvicorn.run(app, host="0.0.0.0", port=8000)

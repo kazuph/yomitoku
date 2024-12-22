@@ -43,7 +43,8 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/pip uv sync --no-install-project
 
 # ソースコードなどをコピー
-COPY src configs scripts static tests app.py ./
+# COPY src configs scripts static tests app.py ./
+COPY . .
 
 # 残りの依存関係を同期 (この時点でyomitokuのビルドが走る)
 RUN --mount=type=cache,target=/root/.cache/pip uv sync

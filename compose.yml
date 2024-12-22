@@ -8,11 +8,12 @@ services:
       - "8000:8000"
     volumes:
       - .:/workspace
+      - ~/.cache:/root/.cache
     command: uv run python app.py
     deploy:
       resources:
         reservations:
           devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+              - driver: nvidia
+                device_ids: ['0']
+                capabilities: [compute, utility, gpu]
